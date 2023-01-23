@@ -850,6 +850,19 @@ double FixWangLandau::wang_landau_update(const int n)
 /* ----------------------------------------------------------------------
 ------------------------------------------------------------------------- */
 
+double FixWangLandau::wang_landau_factor(const int n, const int step)
+{
+  // The Wang Landau factor is the ratio of the current bin to that of
+  // the previous step.  This is used to scale the acceptance probability
+  unsigned int bin_index_is = n2i[n];
+  unsigned int bin_index_to = n2i[n+step];
+
+  return qs[bin_index_is] / qs[bin_index_to];
+}
+
+/* ----------------------------------------------------------------------
+------------------------------------------------------------------------- */
+
 void FixWangLandau::attempt_atomic_translation()
 {
   ntranslation_attempts += 1.0;
@@ -936,10 +949,13 @@ void FixWangLandau::attempt_atomic_deletion()
   int i = pick_random_gas_atom();
 
   int success = 0;
+
+  double wl_factor = wang_landau_factor(ngas, -1);
+
   if (i >= 0) {
     double deletion_energy = energy(i,ngcmc_type,-1,atom->x[i]);
     if (random_unequal->uniform() <
-        ngas*exp(beta*deletion_energy)/(zz*volume)) {
+        wl_factor*ngas*exp(beta*deletion_energy)/(zz*volume)) {
       atom->avec->copy(atom->nlocal-1,i,1);
       atom->nlocal--;
       success = 1;
@@ -1038,9 +1054,11 @@ void FixWangLandau::attempt_atomic_insertion()
     }
     double insertion_energy = energy(ii,ngcmc_type,-1,coord);
 
+    double wl_factor = wang_landau_factor(ngas, 1);
+
     if (insertion_energy < MAXENERGYTEST &&
         random_unequal->uniform() <
-        zz*volume*exp(-beta*insertion_energy)/(ngas+1)) {
+        wl_factor*zz*volume*exp(-beta*insertion_energy)/(ngas+1)) {
       atom->avec->create_atom(ngcmc_type,coord);
       int m = atom->nlocal - 1;
 
@@ -1307,8 +1325,10 @@ void FixWangLandau::attempt_molecule_deletion()
 
   double deletion_energy_sum = molecule_energy(deletion_molecule);
 
+  double wl_factor = wang_landau_factor(ngas, -1);
+
   if (random_equal->uniform() <
-      ngas*exp(beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
+      wl_factor*ngas*exp(beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
     int i = 0;
     while (i < atom->nlocal) {
       if (atom->molecule[i] == deletion_molecule) {
@@ -1446,8 +1466,10 @@ void FixWangLandau::attempt_molecule_insertion()
   MPI_Allreduce(&insertion_energy,&insertion_energy_sum,1,
                 MPI_DOUBLE,MPI_SUM,world);
 
+  double wl_factor = wang_landau_factor(ngas, 1);
+
   if (insertion_energy_sum < MAXENERGYTEST &&
-      random_equal->uniform() < zz*volume*natoms_per_molecule*
+      random_equal->uniform() < wl_factor*zz*volume*natoms_per_molecule*
       exp(-beta*insertion_energy_sum)/(ngas + natoms_per_molecule)) {
 
     tagint maxmol = 0;
@@ -1647,8 +1669,10 @@ void FixWangLandau::attempt_atomic_deletion_full()
   if (force->pair->tail_flag) force->pair->reinit();
   double energy_after = energy_full();
 
+  double wl_factor = wang_landau_factor(ngas, -1);
+
   if (random_equal->uniform() <
-      ngas*exp(beta*(energy_before - energy_after))/(zz*volume)) {
+      wl_factor*ngas*exp(beta*(energy_before - energy_after))/(zz*volume)) {
     if (i >= 0) {
       atom->avec->copy(atom->nlocal-1,i,1);
       atom->nlocal--;
@@ -1766,9 +1790,11 @@ void FixWangLandau::attempt_atomic_insertion_full()
   if (force->pair->tail_flag) force->pair->reinit();
   double energy_after = energy_full();
 
+  double wl_factor = wang_landau_factor(ngas, 1);
+
   if (energy_after < MAXENERGYTEST &&
       random_equal->uniform() <
-      zz*volume*exp(beta*(energy_before - energy_after))/(ngas+1)) {
+      wl_factor*zz*volume*exp(beta*(energy_before - energy_after))/(ngas+1)) {
 
     ninsertion_successes += 1.0;
     energy_stored = energy_after;
@@ -2023,7 +2049,9 @@ void FixWangLandau::attempt_molecule_deletion_full()
 
   // energy_before corrected by energy_intra
 
-  double deltaphi = ngas*exp(beta*((energy_before - energy_intra) - energy_after))/(zz*volume*natoms_per_molecule);
+  double wl_factor = wang_landau_factor(ngas, -1);
+  double deltaphi = wl_factor*ngas*exp(beta*((energy_before - energy_intra) 
+                    - energy_after))/(zz*volume*natoms_per_molecule);
 
   if (random_equal->uniform() < deltaphi) {
     int i = 0;
@@ -2233,7 +2261,9 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
   // energy_after corrected by energy_intra
 
-  double deltaphi = zz*volume*natoms_per_molecule*
+  double wl_factor = wang_landau_factor(ngas, 1);
+
+  double deltaphi = wl_factor*zz*volume*natoms_per_molecule*
     exp(beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);
 
   if (energy_after < MAXENERGYTEST &&

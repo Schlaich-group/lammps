@@ -141,6 +141,7 @@ class FixWangLandau : public Fix {
   void attempt_molecule_rotation_full();
   void attempt_molecule_deletion_full();
   double wang_landau_update(const int N);
+  double wang_landau_factor(const int n, const int step);
   void attempt_molecule_insertion_full();
 
   double energy(int, int, tagint, double *);
