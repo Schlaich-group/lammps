@@ -47,6 +47,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -478,6 +479,10 @@ void FixWangLandau::init()
 
   // Check that the first value of ns is ngas_min and the last value is ngas_max
   if (ns[0] != min_ngas || ns[ns.size()-1] != max_ngas) {
+      std::cout << "min_ngas = " << min_ngas << std::endl;
+      std::cout << "max_ngas = " << max_ngas << std::endl;
+      std::cout << "ns[0] = " << ns[0] << std::endl;
+      std::cout << "ns[ns.size()-1] = " << ns[ns.size()-1] << std::endl;
       error->all(FLERR, "Bins in qs.dat do not match min and max values");
   }
 
@@ -839,7 +844,7 @@ void FixWangLandau::pre_exchange()
 /* ----------------------------------------------------------------------
 ------------------------------------------------------------------------- */
 
-double FixWangLandau::wang_landau_update(const int n)
+void FixWangLandau::wang_landau_update(const int n)
 {
   // Wang Landau update step
   unsigned int bin_index = n2i[n];

@@ -12,13 +12,11 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-// clang-format off
 FixStyle(wang_landau,FixWangLandau);
-// clang-format on
 #else
 
-#ifndef LMP_FIX_GCMC_H
-#define LMP_FIX_GCMC_H
+#ifndef LMP_FIX_WANG_LANDAU_H
+#define LMP_FIX_WANG_LANDAU_H
 
 #include "fix.h"
 #include <vector>
@@ -140,7 +138,7 @@ class FixWangLandau : public Fix {
   void attempt_molecule_translation_full();
   void attempt_molecule_rotation_full();
   void attempt_molecule_deletion_full();
-  double wang_landau_update(const int N);
+  void wang_landau_update(const int N);
   double wang_landau_factor(const int n, const int step);
   void attempt_molecule_insertion_full();
 
