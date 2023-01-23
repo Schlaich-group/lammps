@@ -928,7 +928,10 @@ void FixWangLandau::attempt_atomic_deletion()
 {
   ndeletion_attempts += 1.0;
 
-  if (ngas == 0 || ngas <= min_ngas) return;
+  if (ngas == 0 || ngas <= min_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   int i = pick_random_gas_atom();
 
@@ -958,6 +961,7 @@ void FixWangLandau::attempt_atomic_deletion()
     update_gas_atoms_list();
     ndeletion_successes += 1.0;
   }
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -969,7 +973,10 @@ void FixWangLandau::attempt_atomic_insertion()
 
   ninsertion_attempts += 1.0;
 
-  if (ngas >= max_ngas) return;
+  if (ngas >= max_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   // pick coordinates for insertion point
 
@@ -1071,6 +1078,7 @@ void FixWangLandau::attempt_atomic_insertion()
     update_gas_atoms_list();
     ninsertion_successes += 1.0;
   }
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -1285,7 +1293,10 @@ void FixWangLandau::attempt_molecule_deletion()
 {
   ndeletion_attempts += 1.0;
 
-  if (ngas == 0 || ngas <= min_ngas) return;
+  if (ngas == 0 || ngas <= min_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   // work-around to avoid n=0 problem with fix rigid/nvt/small
 
@@ -1314,6 +1325,7 @@ void FixWangLandau::attempt_molecule_deletion()
     update_gas_atoms_list();
     ndeletion_successes += 1.0;
   }
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -1324,7 +1336,10 @@ void FixWangLandau::attempt_molecule_insertion()
   double lamda[3];
   ninsertion_attempts += 1.0;
 
-  if (ngas >= max_ngas) return;
+  if (ngas >= max_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   double com_coord[3];
   if (region) {
@@ -1509,6 +1524,7 @@ void FixWangLandau::attempt_molecule_insertion()
     ninsertion_successes += 1.0;
   }
   delete[] procflag;
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -1609,7 +1625,10 @@ void FixWangLandau::attempt_atomic_deletion_full()
 
   ndeletion_attempts += 1.0;
 
-  if (ngas == 0 || ngas <= min_ngas) return;
+  if (ngas == 0 || ngas <= min_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   double energy_before = energy_stored;
 
@@ -1648,6 +1667,7 @@ void FixWangLandau::attempt_atomic_deletion_full()
     energy_stored = energy_before;
   }
   update_gas_atoms_list();
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -1658,7 +1678,10 @@ void FixWangLandau::attempt_atomic_insertion_full()
   double lamda[3];
   ninsertion_attempts += 1.0;
 
-  if (ngas >= max_ngas) return;
+  if (ngas >= max_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   double energy_before = energy_stored;
 
@@ -1757,6 +1780,7 @@ void FixWangLandau::attempt_atomic_insertion_full()
     energy_stored = energy_before;
   }
   update_gas_atoms_list();
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
@@ -1955,7 +1979,10 @@ void FixWangLandau::attempt_molecule_deletion_full()
 {
   ndeletion_attempts += 1.0;
 
-  if (ngas == 0 || ngas <= min_ngas) return;
+  if (ngas == 0 || ngas <= min_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   // work-around to avoid n=0 problem with fix rigid/nvt/small
 
@@ -2027,6 +2054,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
     if (force->pair->tail_flag) force->pair->reinit();
   }
   update_gas_atoms_list();
+  wang_landau_update(ngas);
   delete[] tmpmask;
 }
 
@@ -2038,8 +2066,10 @@ void FixWangLandau::attempt_molecule_insertion_full()
   double lamda[3];
   ninsertion_attempts += 1.0;
 
-  // TODO: also need to update here!
-  if (ngas >= max_ngas) return;
+  if (ngas >= max_ngas) {
+    wang_landau_update(ngas);
+    return;
+  }
 
   double energy_before = energy_stored;
 
@@ -2203,7 +2233,6 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
   // energy_after corrected by energy_intra
 
-  // TODO: update with the Q(N) correction
   double deltaphi = zz*volume*natoms_per_molecule*
     exp(beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);
 
@@ -2212,13 +2241,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
     ninsertion_successes += 1.0;
     energy_stored = energy_after;
-
-    // Update Q(N+1)
-
   } else {
-
-    // TODO: Update Q(N)
-
     atom->nbonds -= onemols[imol]->nbonds;
     atom->nangles -= onemols[imol]->nangles;
     atom->ndihedrals -= onemols[imol]->ndihedrals;
@@ -2237,6 +2260,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
     if (force->pair->tail_flag) force->pair->reinit();
   }
   update_gas_atoms_list();
+  wang_landau_update(ngas);
 }
 
 /* ----------------------------------------------------------------------
