@@ -101,11 +101,10 @@ FixWangLandau::FixWangLandau(LAMMPS *lmp, int narg, char **arg) :
   ngcmc_type = utils::inumeric(FLERR,arg[6],false,lmp);
   seed = utils::inumeric(FLERR,arg[7],false,lmp);
   reservoir_temperature = utils::numeric(FLERR,arg[8],false,lmp);
-  chemical_potential = utils::numeric(FLERR,arg[9],false,lmp);
-  displace = utils::numeric(FLERR,arg[10],false,lmp);
+  displace = utils::numeric(FLERR,arg[9],false,lmp);
 
   // This is the Wang Landau setup
-  f = utils::numeric(FLERR,arg[11],false,lmp);
+  f = utils::numeric(FLERR,arg[10],false,lmp);
 
   if (nevery <= 0) error->all(FLERR,"Illegal fix gcmc command");
   if (nexchanges < 0) error->all(FLERR,"Illegal fix gcmc command");
@@ -117,7 +116,7 @@ FixWangLandau::FixWangLandau(LAMMPS *lmp, int narg, char **arg) :
 
   // read options from end of input line
 
-  options(narg-12,&arg[12]);
+  options(narg-11,&arg[11]);
 
   // random number generator, same for all procs
 
@@ -685,12 +684,14 @@ void FixWangLandau::init()
   // For LJ units, lambda=1
   beta = 1.0/(force->boltz*reservoir_temperature);
   if (strcmp(update->unit_style,"lj") == 0)
-    zz = exp(beta*chemical_potential);
+    // Is one, because in Wang Landau, we neglect the chemical potential
+    // Same down below
+    zz = 1;
   else {
     double lambda = sqrt(force->hplanck*force->hplanck/
                          (2.0*MY_PI*gas_mass*force->mvv2e*
                         force->boltz*reservoir_temperature));
-    zz = exp(beta*chemical_potential)/(pow(lambda,3.0));
+    zz = 1/(pow(lambda,3.0));
   }
 
   sigma = sqrt(force->boltz*reservoir_temperature*tfac_insert/gas_mass/force->mvv2e);
@@ -844,7 +845,7 @@ void FixWangLandau::wang_landau_update(const int n)
 {
   // Wang Landau update step
   unsigned int bin_index = n2i[n];
-  qs[bin_index] *= f;
+  qs[bin_index] += log(f);
   hs[bin_index]++;
 }
 
@@ -858,7 +859,7 @@ double FixWangLandau::wang_landau_factor(const int n, const int step)
   unsigned int bin_index_is = n2i[n];
   unsigned int bin_index_to = n2i[n+step];
 
-  return qs[bin_index_is] / qs[bin_index_to];
+  return qs[bin_index_is] - qs[bin_index_to];
 }
 
 /* ----------------------------------------------------------------------
@@ -956,7 +957,7 @@ void FixWangLandau::attempt_atomic_deletion()
   if (i >= 0) {
     double deletion_energy = energy(i,ngcmc_type,-1,atom->x[i]);
     if (random_unequal->uniform() <
-        wl_factor*ngas*exp(beta*deletion_energy)/(zz*volume)) {
+        ngas*exp(wl_factor+beta*deletion_energy)/(zz*volume)) {
       atom->avec->copy(atom->nlocal-1,i,1);
       atom->nlocal--;
       success = 1;
@@ -1059,7 +1060,7 @@ void FixWangLandau::attempt_atomic_insertion()
 
     if (insertion_energy < MAXENERGYTEST &&
         random_unequal->uniform() <
-        wl_factor*zz*volume*exp(-beta*insertion_energy)/(ngas+1)) {
+        zz*volume*exp(wl_factor-beta*insertion_energy)/(ngas+1)) {
       atom->avec->create_atom(ngcmc_type,coord);
       int m = atom->nlocal - 1;
 
@@ -1329,7 +1330,7 @@ void FixWangLandau::attempt_molecule_deletion()
   double wl_factor = wang_landau_factor(ngas, -1);
 
   if (random_equal->uniform() <
-      wl_factor*ngas*exp(beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
+      ngas*exp(wl_factor+beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
     int i = 0;
     while (i < atom->nlocal) {
       if (atom->molecule[i] == deletion_molecule) {
@@ -1470,8 +1471,8 @@ void FixWangLandau::attempt_molecule_insertion()
   double wl_factor = wang_landau_factor(ngas, 1);
 
   if (insertion_energy_sum < MAXENERGYTEST &&
-      random_equal->uniform() < wl_factor*zz*volume*natoms_per_molecule*
-      exp(-beta*insertion_energy_sum)/(ngas + natoms_per_molecule)) {
+      random_equal->uniform() < zz*volume*natoms_per_molecule*
+      exp(-wl_factor+beta*insertion_energy_sum)/(ngas + natoms_per_molecule)) {
 
     tagint maxmol = 0;
     for (int i = 0; i < atom->nlocal; i++) maxmol = MAX(maxmol,atom->molecule[i]);
@@ -1673,7 +1674,7 @@ void FixWangLandau::attempt_atomic_deletion_full()
   double wl_factor = wang_landau_factor(ngas, -1);
 
   if (random_equal->uniform() <
-      wl_factor*ngas*exp(beta*(energy_before - energy_after))/(zz*volume)) {
+      ngas*exp(wl_factor+beta*(energy_before - energy_after))/(zz*volume)) {
     if (i >= 0) {
       atom->avec->copy(atom->nlocal-1,i,1);
       atom->nlocal--;
@@ -1795,7 +1796,7 @@ void FixWangLandau::attempt_atomic_insertion_full()
 
   if (energy_after < MAXENERGYTEST &&
       random_equal->uniform() <
-      wl_factor*zz*volume*exp(beta*(energy_before - energy_after))/(ngas+1)) {
+      zz*volume*exp(wl_factor+beta*(energy_before - energy_after))/(ngas+1)) {
 
     ninsertion_successes += 1.0;
     energy_stored = energy_after;
@@ -2051,7 +2052,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
   // energy_before corrected by energy_intra
 
   double wl_factor = wang_landau_factor(ngas, -1);
-  double deltaphi = wl_factor*ngas*exp(beta*((energy_before - energy_intra) 
+  double deltaphi = ngas*exp(wl_factor+beta*((energy_before - energy_intra) 
                     - energy_after))/(zz*volume*natoms_per_molecule);
 
   if (random_equal->uniform() < deltaphi) {
@@ -2264,8 +2265,8 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
   double wl_factor = wang_landau_factor(ngas, 1);
 
-  double deltaphi = wl_factor*zz*volume*natoms_per_molecule*
-    exp(beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);
+  double deltaphi = zz*volume*natoms_per_molecule*
+    exp(wl_factor+beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);
 
   if (energy_after < MAXENERGYTEST &&
       random_equal->uniform() < deltaphi) {
