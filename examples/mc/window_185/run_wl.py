@@ -3,13 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.constants as constants
 
-WINDOW_MIN = 0
-WINDOW_MAX = 180
-INITIAL_F = np.exp(4)**(1/2**6)
+WINDOW_MIN = 135
+WINDOW_MAX = 185
+INITIAL_F = np.exp(4)**(1/2**5)
 F_STEP_MAX = 15
 ACCURACY_FACTOR = 500
 
-NR_STEPS_MC = 100000
+NR_STEPS_MC = 500000
 
 # pick the middle of the window
 START_NR = (WINDOW_MAX - WINDOW_MIN) // 2
@@ -37,9 +37,8 @@ def create_and_run(f_fac, steps, min_n=WINDOW_MIN, max_n=WINDOW_MAX,
     # run lammps
     import subprocess
     # subprocess call without output
-    #subprocess.call(['../../build/lmp', '-in', 'in.wang_landau'], 
-    #                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.call(['../../../build/lmp', '-in', 'in.wang_landau'])
+    subprocess.call(['../../../build/lmp', '-in', 'in.wang_landau'], 
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def convergence_check(f):
@@ -54,7 +53,8 @@ def reset_hs():
     np.savetxt('qs.dat', qs, delimiter='\t')
 
 
-create_and_run(INITIAL_F, 100000, start_n=10)
+create_and_run(INITIAL_F, 100, start_n=START_NR)
+input()
 # print(convergence_check(INITIAL_F))
 
 f = INITIAL_F
