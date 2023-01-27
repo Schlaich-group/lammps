@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 WINDOW_MIN = 0
-WINDOW_MAX = 220
-INITIAL_F = np.exp(4)
+WINDOW_MAX = 180
+INITIAL_F = np.exp(4)**(1/2**6)
 F_STEP_MAX = 15
 ACCURACY_FACTOR = 500
 
@@ -14,19 +14,20 @@ windows = np.arange(WINDOW_MIN, WINDOW_MAX+1)
 
 # write the windows to a file, together with a number of ones (qs) and zeros (hs)
 # delimited by a tab
-np.savetxt('qs.dat', np.column_stack((windows, np.zeros_like(windows), 
-                                           np.zeros_like(windows))), 
-            delimiter='\t')
+np.savetxt('qs.dat', np.column_stack((windows, np.zeros_like(windows),
+                                      np.zeros_like(windows))),
+           delimiter='\t')
 
 # create the template for the lammps input file from in.wang_landau.template
 template = jinja2.Template(open('in.wang_landau.template').read())
 
 # render the initial f and number of steps
 def create_and_run(f_fac, steps, min_n=WINDOW_MIN, max_n=WINDOW_MAX,
-                   read_data=False):
+                   read_data=False, start_n=0):
     with open('in.wang_landau', 'w') as f:
         f.write(template.render(f_fac=f_fac, steps=steps, min_n=WINDOW_MIN, 
-                                max_n=WINDOW_MAX, read_data=read_data))
+                                max_n=WINDOW_MAX, read_data=read_data, 
+                                start_n=start_n))
 
     # run lammps
     import subprocess
@@ -44,8 +45,9 @@ def reset_hs():
     qs[:, 2] = 0
     np.savetxt('qs.dat', qs, delimiter='\t')
 
-create_and_run(INITIAL_F, 100000)
-print(convergence_check(INITIAL_F))
+
+create_and_run(INITIAL_F, 100000, start_n=1)
+# print(convergence_check(INITIAL_F))
 
 f = INITIAL_F
 f_update = 1
@@ -53,11 +55,11 @@ print(f'Starting to run, f is {f} we are at f_{f_update}')
 while True:
     # check for convergence, if converged, make f more fine grained by sqrt(f)
     if convergence_check(f):
-        f = np.sqrt(f)
-        f_update += 1
-
         # write out the qs to its own file, per f_update
         np.savetxt(f'qs_f_{f_update}.dat', np.loadtxt('qs.dat', delimiter='\t'))
+
+        f = np.sqrt(f)
+        f_update += 1
 
         # if f is too fine grained, break
         if f_update > 15:break
@@ -69,9 +71,22 @@ while True:
     print(f'Running with f={f} for {NR_STEPS_MC} steps')
     create_and_run(f, NR_STEPS_MC, read_data=True)
 
+def omega(f,temp,Qarr):
+    """ all energies in Kelvin
+        fugacity in bar!
+    """
+    mass = 28 * constants.atomic_mass
+    db = constants.Planck / np.sqrt(2*np.pi * mass * constants.Boltzmann * temp)
+    mu = temp * np.log((f*constants.bar)*db**3/(constants.Boltzmann*temp))
+    N = Qarr[:,0]
+    lnQ = Qarr[:,1]
+    return (-temp*lnQ - mu*N)
+
 fig, ax = plt.subplots(2)
-hs = np.loadtxt('qs.dat', delimiter='\t')[:, 2]
+
 qs = np.loadtxt('qs.dat', delimiter='\t')[:, 1]
+hs = np.loadtxt('qs.dat', delimiter='\t')[:, 2]
+
 ax[0].plot(windows, hs)
 ax[0].set_ylim(0, hs.max()+ 100)
 ax[1].plot(windows, qs)

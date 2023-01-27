@@ -845,7 +845,7 @@ void FixWangLandau::wang_landau_update(const int n)
 {
   // Wang Landau update step
   unsigned int bin_index = n2i[n];
-  qs[bin_index] += log(f);
+  qs[bin_index] += std::log(f);
   hs[bin_index]++;
 }
 
