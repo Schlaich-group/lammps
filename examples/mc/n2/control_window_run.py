@@ -10,12 +10,12 @@ WINDOW_MIN = 0
 WINDOW_MAX = 180
 WINDOW_LENGTH = 30
 NR_OVERLAP = 5
-INITIAL_F = np.exp(4)
+INITIAL_F = np.exp(4) #**(1/2**6)
 F_STEP_MAX = 15
 ACCURACY_FACTOR = 500
 
-NR_STEPS_MC = 10000
-NR_THREADS = 4
+NR_STEPS_MC = 100000
+NR_THREADS = 1
 
 TEMPLATE_FILENAME = 'in.wang_landau.n2.template'
 
@@ -26,6 +26,8 @@ def run_everything(window):
     # create a dir for the window
     if not os.path.exists(f'window_{window[0]}_{window[1]}'):
         os.mkdir(f'window_{window[0]}_{window[1]}')
+    
+    start_nr = (window[1] - window[0]) // 2
 
     # change to the dir
     os.chdir(f'window_{window[0]}_{window[1]}')
@@ -56,16 +58,23 @@ def run_everything(window):
         # run lammps
         import subprocess
         # subprocess call without output
-        subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        call = subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'])
+
+        # check the return code of the subprocess call
+        if call == 0:
+            print('LAMMPS converged.')
+            return True
+        else:
+            return False
 
 
     def convergence_check(f):
         # Do a convergence check on qs.dat, see if the histogram is flat 
         # (h.min == 1/ln(f))
         hist = np.loadtxt('qs.dat', delimiter='\t')
-        return hist[:, 2].min() > ACCURACY_FACTOR / np.sqrt(np.log(f))
+        return hist[:, 2].min() >= ACCURACY_FACTOR / np.sqrt(np.log(f))
 
 
     def reset_hs():
@@ -73,7 +82,7 @@ def run_everything(window):
         qs[:, 2] = 0
         np.savetxt('qs.dat', qs, delimiter='\t')
 
-    create_and_run(INITIAL_F, 100000, start_n=10)
+    create_and_run(INITIAL_F, NR_STEPS_MC, start_n=start_nr)
     # print(convergence_check(INITIAL_F))
 
     f = INITIAL_F
@@ -85,7 +94,8 @@ def run_everything(window):
         if convergence_check(f):
             # write out the qs to its own file, per f_update
             np.savetxt(f'qs_f_{f_update}.dat', np.loadtxt('qs.dat',
-                                                          delimiter='\t'))
+                                                          delimiter='\t'),
+                       delimiter='\t')
 
             f = np.sqrt(f)
             f_update += 1
@@ -99,18 +109,9 @@ def run_everything(window):
             print(f'This means we will step through {NR_STEPS_MC} steps')
 
         print(f'Running with f={f} for {NR_STEPS_MC} steps')
-        create_and_run(f, NR_STEPS_MC, read_data=True)
-
-    def omega(f, temp, Qarr):
-        """ all energies in Kelvin
-            fugacity in bar!
-        """
-        mass = 28 * constants.atomic_mass
-        db = constants.Planck / np.sqrt(2*np.pi * mass * constants.Boltzmann * temp)
-        mu = temp * np.log((f*constants.bar)*db**3/(constants.Boltzmann*temp))
-        N = Qarr[:, 0]
-        lnQ = Qarr[:, 1]
-        return (-temp*lnQ - mu*N)
+        if create_and_run(f, NR_STEPS_MC, read_data=True):
+            converged = convergence_check(f)
+            print(f'Converged: {converged}')
 
     # change back to the main dir
     os.chdir('..')
@@ -121,9 +122,9 @@ step = WINDOW_LENGTH - NR_OVERLAP
 left, right = 0, WINDOW_LENGTH
 window = []
 while right < WINDOW_MAX:
+    window.append((left, right))
     left += step
     right += step if right + step < WINDOW_MAX else WINDOW_MAX
-    window.append((left, right))
 
 # Run through the simulations in parallel
 with mp.Pool(NR_THREADS) as p:
