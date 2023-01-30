@@ -853,7 +853,6 @@ void FixWangLandau::wang_landau_update(const int n)
     }
   }
 
-  write_histogram();
   exit(0);
 }
 
@@ -1333,7 +1332,7 @@ void FixWangLandau::attempt_molecule_deletion()
   ndeletion_attempts += 1.0;
 
   if (ngas == 0 || ngas <= min_ngas) {
-    wang_landau_update(ngas);
+    wang_landau_update(ngas/natoms_per_molecule);
     return;
   }
 
@@ -1366,7 +1365,7 @@ void FixWangLandau::attempt_molecule_deletion()
     update_gas_atoms_list();
     ndeletion_successes += 1.0;
   }
-  wang_landau_update(ngas);
+  wang_landau_update(ngas/natoms_per_molecule);
 }
 
 /* ----------------------------------------------------------------------
@@ -1378,7 +1377,7 @@ void FixWangLandau::attempt_molecule_insertion()
   ninsertion_attempts += 1.0;
 
   if (ngas >= max_ngas) {
-    wang_landau_update(ngas);
+    wang_landau_update(ngas/natoms_per_molecule);
     return;
   }
 
@@ -1567,7 +1566,7 @@ void FixWangLandau::attempt_molecule_insertion()
     ninsertion_successes += 1.0;
   }
   delete[] procflag;
-  wang_landau_update(ngas);
+  wang_landau_update(ngas/natoms_per_molecule);
 }
 
 /* ----------------------------------------------------------------------
@@ -2027,7 +2026,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
   ndeletion_attempts += 1.0;
 
   if (ngas == 0 || ngas <= min_ngas) {
-    wang_landau_update(ngas);
+    wang_landau_update(ngas/natoms_per_molecule);
     return;
   }
 
@@ -2103,7 +2102,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
     if (force->pair->tail_flag) force->pair->reinit();
   }
   update_gas_atoms_list();
-  wang_landau_update(ngas);
+  wang_landau_update(ngas/natoms_per_molecule);
   delete[] tmpmask;
 }
 
@@ -2116,7 +2115,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
   ninsertion_attempts += 1.0;
 
   if (ngas >= max_ngas) {
-    wang_landau_update(ngas);
+    wang_landau_update(ngas/natoms_per_molecule);
     return;
   }
 
@@ -2311,7 +2310,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
     if (force->pair->tail_flag) force->pair->reinit();
   }
   update_gas_atoms_list();
-  wang_landau_update(ngas);
+  wang_landau_update(ngas/natoms_per_molecule);
 }
 
 /* ----------------------------------------------------------------------
