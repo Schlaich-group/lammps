@@ -10,11 +10,11 @@ WINDOW_MIN = 0
 WINDOW_MAX = 180
 WINDOW_LENGTH = 30
 NR_OVERLAP = 5
-INITIAL_F = np.exp(4)**(1/2**6)
+INITIAL_F = np.exp(4)
 F_STEP_MAX = 15
 ACCURACY_FACTOR = 500
 
-NR_STEPS_MC = 100000
+NR_STEPS_MC = 10000
 NR_THREADS = 4
 
 TEMPLATE_FILENAME = 'in.wang_landau.n2.template'
@@ -56,13 +56,14 @@ def run_everything(window):
         # run lammps
         import subprocess
         # subprocess call without output
-        subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'], 
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # subprocess.call(['../../../../build/lmp', '-in', 'in.wang_landau'])
 
 
     def convergence_check(f):
-        # Do a convergence check on qs.dat, see if the histogram is flat (h.min == 1/ln(f))
+        # Do a convergence check on qs.dat, see if the histogram is flat 
+        # (h.min == 1/ln(f))
         hist = np.loadtxt('qs.dat', delimiter='\t')
         return hist[:, 2].min() > ACCURACY_FACTOR / np.sqrt(np.log(f))
 
@@ -79,7 +80,8 @@ def run_everything(window):
     f_update = 1
     print(f'Starting to run, f is {f} we are at f_{f_update}')
     while True:
-        # check for convergence, if converged, make f more fine grained by sqrt(f)
+        # check for convergence, if converged, make f more fine grained by 
+        # sqrt(f)
         if convergence_check(f):
             # write out the qs to its own file, per f_update
             np.savetxt(f'qs_f_{f_update}.dat', np.loadtxt('qs.dat',
