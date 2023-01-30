@@ -831,11 +831,7 @@ void FixWangLandau::pre_exchange()
   }
   next_reneighbor = update->ntimestep + nevery;
 
-  // Write the ns, qs, and hs to the qs.dat file, tab separated
-  std::ofstream file("qs.dat");
-  for (unsigned int i = 0; i < ns.size(); i++) {
-    file << ns[i] << "\t" << qs[i] << "\t" << hs[i] << std::endl;
-  }
+  write_histogram();
 }
 
 /* ----------------------------------------------------------------------
@@ -847,6 +843,29 @@ void FixWangLandau::wang_landau_update(const int n)
   unsigned int bin_index = n2i[n];
   qs[bin_index] += std::log(f);
   hs[bin_index]++;
+
+
+  // Check if the histogram is converged, which is defined as the minimum
+  // of hs being greater than 500 / sqrt(log(f))
+  for (auto h : hs) {
+    if (h < 500.0 / std::sqrt(std::log(f))) {
+      return;
+    }
+  }
+
+  write_histogram();
+  exit(0);
+}
+
+/* ----------------------------------------------------------------------
+------------------------------------------------------------------------- */
+
+void FixWangLandau::write_histogram() {
+  // Write the ns, qs, and hs to the qs.dat file, tab separated
+  std::ofstream file("qs.dat");
+  for (unsigned int i = 0; i < ns.size(); i++) {
+    file << ns[i] << "\t" << qs[i] << "\t" << hs[i] << std::endl;
+  }
 }
 
 /* ----------------------------------------------------------------------
