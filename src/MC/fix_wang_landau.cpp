@@ -853,6 +853,7 @@ void FixWangLandau::wang_landau_update(const int n)
     }
   }
 
+  write_histogram();
   exit(0);
 }
 
