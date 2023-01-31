@@ -277,6 +277,7 @@ void FixWangLandau::options(int narg, char **arg)
   overlap_flag = 0;
   min_ngas = -1;
   max_ngas = INT_MAX;
+  accuracy_fac = 500.0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -392,6 +393,10 @@ void FixWangLandau::options(int narg, char **arg)
     } else if (strcmp(arg[iarg],"max") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix gcmc command");
       max_ngas = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"accuracy") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix gcmc command");
+      accuracy_fac = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix gcmc command");
   }
@@ -848,7 +853,7 @@ void FixWangLandau::wang_landau_update(const int n)
   // Check if the histogram is converged, which is defined as the minimum
   // of hs being greater than 500 / sqrt(log(f))
   for (auto h : hs) {
-    if (h < 500.0 / std::sqrt(std::log(f))) {
+    if (h < accuracy_fac / std::sqrt(std::log(f))) {
       return;
     }
   }
