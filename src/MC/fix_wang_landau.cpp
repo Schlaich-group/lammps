@@ -277,6 +277,7 @@ void FixWangLandau::options(int narg, char **arg)
   overlap_flag = 0;
   min_ngas = -1;
   max_ngas = INT_MAX;
+  accuracy_fac = 500.0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -393,6 +394,10 @@ void FixWangLandau::options(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix gcmc command");
       max_ngas = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       iarg += 2;
+    } else if (strcmp(arg[iarg],"accuracy") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix gcmc command");
+      accuracy_fac = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      iarg += 2;
     } else error->all(FLERR,"Illegal fix gcmc command");
   }
 }
@@ -474,11 +479,6 @@ void FixWangLandau::init()
       // Create a map from the number of gas molecules to the index in the vector
       n2i[row[0]] = nlines;
       nlines++;
-  }
-
-  // Check that the first value of ns is ngas_min and the last value is ngas_max
-  if (ns[0] != min_ngas || ns[ns.size()-1] != max_ngas) {
-      error->all(FLERR, "Bins in qs.dat do not match min and max values");
   }
 
   // set index and check validity of region
@@ -777,6 +777,27 @@ void FixWangLandau::pre_exchange()
   if (triclinic) domain->lamda2x(atom->nlocal+atom->nghost);
   update_gas_atoms_list();
 
+  // For the check we need to make sure that the minimum and maximum is 
+  // divided by natoms_per_molecule if we are using the molecule mode
+  int current_n = ngas;
+  int minimum = min_ngas;
+  int maximum = max_ngas;
+
+  if (exchmode == EXCHMOL) {
+      minimum /= natoms_per_molecule;
+      maximum /= natoms_per_molecule;
+      current_n /= natoms_per_molecule;
+  }
+
+  // Check that the first value of ns is ngas_min and the last value is ngas_max
+  if (ns[0] != minimum || ns[ns.size()-1] != maximum) {
+      error->all(FLERR, "Bins in qs.dat do not match min and max values");
+  }
+
+  if (current_n < minimum || current_n > maximum) {
+      error->all(FLERR, "The number of gas molecules is outside of the window");
+  }
+
   if (full_flag) {
     energy_stored = energy_full();
     if (overlap_flag && energy_stored > MAXENERGYTEST)
@@ -848,7 +869,7 @@ void FixWangLandau::wang_landau_update(const int n)
   // Check if the histogram is converged, which is defined as the minimum
   // of hs being greater than 500 / sqrt(log(f))
   for (auto h : hs) {
-    if (h < 500.0 / std::sqrt(std::log(f))) {
+    if (h < accuracy_fac / std::sqrt(std::log(f))) {
       return;
     }
   }
@@ -1346,7 +1367,7 @@ void FixWangLandau::attempt_molecule_deletion()
 
   double deletion_energy_sum = molecule_energy(deletion_molecule);
 
-  double wl_factor = wang_landau_factor(ngas, -1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, -1);
 
   if (random_equal->uniform() <
       ngas*exp(wl_factor+beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
@@ -1487,7 +1508,7 @@ void FixWangLandau::attempt_molecule_insertion()
   MPI_Allreduce(&insertion_energy,&insertion_energy_sum,1,
                 MPI_DOUBLE,MPI_SUM,world);
 
-  double wl_factor = wang_landau_factor(ngas, 1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, 1);
 
   if (insertion_energy_sum < MAXENERGYTEST &&
       random_equal->uniform() < zz*volume*natoms_per_molecule*
@@ -2070,7 +2091,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
 
   // energy_before corrected by energy_intra
 
-  double wl_factor = wang_landau_factor(ngas, -1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, -1);
   double deltaphi = ngas*exp(wl_factor+beta*((energy_before - energy_intra) 
                     - energy_after))/(zz*volume*natoms_per_molecule);
 
@@ -2282,7 +2303,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
   // energy_after corrected by energy_intra
 
-  double wl_factor = wang_landau_factor(ngas, 1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, 1);
 
   double deltaphi = zz*volume*natoms_per_molecule*
     exp(wl_factor+beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);

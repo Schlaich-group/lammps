@@ -102,6 +102,7 @@ class FixWangLandau : public Fix {
   int overlap_flag;
   int max_ngas;
   int min_ngas;
+  double accuracy_fac;
 
   double energy_intra;
 
