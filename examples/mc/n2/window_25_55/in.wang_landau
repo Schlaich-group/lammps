@@ -16,13 +16,9 @@ pair_modify	tail no # turn of to avoid triggering full_energy
 
 # box
 
-{% if read_data %}
+
 read_data last.data
-{% else %}
-region		box block 0 ${lbox} 0 ${lbox} 0 ${lbox}
-create_box	1 box
-create_atoms 1 random {{start_n}} 42 box
-{% endif %}
+
 
 # lj parameters
 
@@ -38,7 +34,7 @@ write_data last.data
 
 # gcmc
 
-fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} {{f_fac}} min {{min_n}} max {{max_n}}
+fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} 1.0002441704297478 min 25 max 55
 # The 50 is the f value
 
 # atom count
@@ -47,6 +43,6 @@ compute_modify  thermo_temp dynamic yes
 
 # run
 
-run             {{steps}}
+run             100000
 
 write_data last.data

@@ -33,9 +33,6 @@ mass		* 28.0
 
 group		gcmcgroup type 1
 
-# Also write data here, as fast convergence would result in this never being called...
-write_data last.data
-
 # gcmc
 
 fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} {{f_fac}} min {{min_n}} max {{max_n}}

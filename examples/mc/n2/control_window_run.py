@@ -15,7 +15,7 @@ F_STEP_MAX = 15
 ACCURACY_FACTOR = 500
 
 NR_STEPS_MC = 100000
-NR_THREADS = 6
+NR_THREADS = 12
 
 TEMPLATE_FILENAME = 'in.wang_landau.n2.template'
 
@@ -83,7 +83,6 @@ def run_everything(window):
         np.savetxt('qs.dat', qs, delimiter='\t')
 
     create_and_run(INITIAL_F, NR_STEPS_MC, start_n=start_nr)
-    input()
     # print(convergence_check(INITIAL_F))
 
     f = INITIAL_F
