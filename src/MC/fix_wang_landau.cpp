@@ -483,17 +483,24 @@ void FixWangLandau::init()
 
   // For the check we need to make sure that the minimum and maximum is 
   // divided by natoms_per_molecule if we are using the molecule mode
-  double minimum = min_ngas;
-  double maximum = max_ngas;
+  int minimum = min_ngas;
+  int maximum = max_ngas;
+  int current_n = ngas;
 
   if (exchmode == EXCHMOL) {
       minimum /= natoms_per_molecule;
       maximum /= natoms_per_molecule;
+      current_n /= natoms_per_molecule;
   }
 
   // Check that the first value of ns is ngas_min and the last value is ngas_max
   if (ns[0] != minimum || ns[ns.size()-1] != maximum) {
       error->all(FLERR, "Bins in qs.dat do not match min and max values");
+  }
+
+  // Also check that the current n is inside of the window
+  if (current_n < minimum || current_n > maximum) {
+      error->all(FLERR, "The number of gas molecules is outside of the window");
   }
 
   // set index and check validity of region
