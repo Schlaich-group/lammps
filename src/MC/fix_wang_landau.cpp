@@ -481,8 +481,18 @@ void FixWangLandau::init()
       nlines++;
   }
 
+  // For the check we need to make sure that the minimum and maximum is 
+  // divided by natoms_per_molecule if we are using the molecule mode
+  double minimum = min_ngas;
+  double maximum = max_ngas;
+
+  if (exchmode == EXCHMOL) {
+      minimum /= natoms_per_molecule;
+      maximum /= natoms_per_molecule;
+  }
+
   // Check that the first value of ns is ngas_min and the last value is ngas_max
-  if (ns[0] != min_ngas || ns[ns.size()-1] != max_ngas) {
+  if (ns[0] != minimum || ns[ns.size()-1] != maximum) {
       error->all(FLERR, "Bins in qs.dat do not match min and max values");
   }
 
