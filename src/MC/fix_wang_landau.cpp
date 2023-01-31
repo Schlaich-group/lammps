@@ -1361,7 +1361,7 @@ void FixWangLandau::attempt_molecule_deletion()
 
   double deletion_energy_sum = molecule_energy(deletion_molecule);
 
-  double wl_factor = wang_landau_factor(ngas, -1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, -1);
 
   if (random_equal->uniform() <
       ngas*exp(wl_factor+beta*deletion_energy_sum)/(zz*volume*natoms_per_molecule)) {
@@ -1502,7 +1502,7 @@ void FixWangLandau::attempt_molecule_insertion()
   MPI_Allreduce(&insertion_energy,&insertion_energy_sum,1,
                 MPI_DOUBLE,MPI_SUM,world);
 
-  double wl_factor = wang_landau_factor(ngas, 1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, 1);
 
   if (insertion_energy_sum < MAXENERGYTEST &&
       random_equal->uniform() < zz*volume*natoms_per_molecule*
@@ -2085,7 +2085,7 @@ void FixWangLandau::attempt_molecule_deletion_full()
 
   // energy_before corrected by energy_intra
 
-  double wl_factor = wang_landau_factor(ngas, -1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, -1);
   double deltaphi = ngas*exp(wl_factor+beta*((energy_before - energy_intra) 
                     - energy_after))/(zz*volume*natoms_per_molecule);
 
@@ -2297,7 +2297,7 @@ void FixWangLandau::attempt_molecule_insertion_full()
 
   // energy_after corrected by energy_intra
 
-  double wl_factor = wang_landau_factor(ngas, 1);
+  double wl_factor = wang_landau_factor(ngas/natoms_per_molecule, 1);
 
   double deltaphi = zz*volume*natoms_per_molecule*
     exp(wl_factor+beta*(energy_before - (energy_after - energy_intra)))/(ngas + natoms_per_molecule);
