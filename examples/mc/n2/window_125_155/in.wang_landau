@@ -34,7 +34,7 @@ write_data last.data
 
 # gcmc
 
-fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} 1.0004884004786945 min 125 max 155
+fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} 1.0002441704297478 min 125 max 155
 # The 50 is the f value
 
 # atom count
