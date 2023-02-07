@@ -1,0 +1,65 @@
+# GCMC for LJ simple fluid, no dynamics
+# comparable to Frenkel and Smit GCMC Case Study, Figure 5.8 
+
+# variables modifiable using -var command line switch
+
+variable        temp index 95.21 # reduced units: T = 1
+variable	    disp index 1.0
+variable        lbox index 22.5 # reduced units lbox = 6 sigma
+
+# global model settings
+
+units           real
+atom_style      atomic
+pair_style      lj/cut 15 # 4 sigma
+pair_modify	tail no # turn of to avoid triggering full_energy
+
+# box
+
+{% if read_data %}
+read_data last.data
+{% else %}
+region		box block 0 ${lbox} 0 ${lbox} 0 ${lbox}
+create_box	1 box
+{% if fcc %}
+# lj parameters
+
+pair_coeff	* * 0.1892 3.75
+mass		* 28.0
+
+lattice fcc 5.
+region  fcc_region block 0 ${lbox} 0 ${lbox} 0 ${lbox} units box
+create_atoms 1 region fcc_region subset {{start_n}} 42
+# create velocities, sampled from temperature
+velocity all create ${temp} 42
+{% else %}
+create_atoms 1 random {{start_n}} 42 box
+{% endif %}
+{% endif %}
+
+# lj parameters
+
+pair_coeff	* * 0.1892 3.75
+mass		* 28.0
+
+# we recommend setting up a dedicated group for gcmc
+
+group		gcmcgroup type 1
+
+# Also write data here, as fast convergence would result in this never being called...
+write_data last.data
+
+# gcmc
+
+fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} {{f_fac}} min {{min_n}} max {{max_n}}
+# The 50 is the f value
+
+# atom count
+
+compute_modify  thermo_temp dynamic yes
+
+# run
+
+run             {{steps}}
+
+write_data last.data

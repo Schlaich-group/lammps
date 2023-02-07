@@ -1,0 +1,35 @@
+# GCMC for LJ simple fluid, no dynamics
+# comparable to Frenkel and Smit GCMC Case Study, Figure 5.8 
+
+# variables modifiable using -var command line switch
+
+variable        temp index 95.21 # reduced units: T = 1
+variable	    disp index 1.0
+variable        lbox index 22.5 # reduced units lbox = 6 sigma
+
+# global model settings
+
+units           real
+atom_style      atomic
+pair_style      lj/cut 15 # 4 sigma
+pair_modify	tail no # turn of to avoid triggering full_energy
+
+# box
+
+
+# read_data last.data
+
+# create atoms using this lattice
+region		box block 0 ${lbox} 0 ${lbox} 0 ${lbox}
+create_box	1 box
+
+pair_coeff	* * 0.1892 3.75
+mass		* 28.0
+
+# create atoms on a fcc to start, with start_n atoms lattice cells occupied
+# create_atoms 1 region box subset {{start_n}} 42
+lattice fcc 5
+region		fcc_box block 0 ${lbox} 0 ${lbox} 0 ${lbox}
+create_atoms 1 region fcc_box subset 165 42
+
+write_data fcc.data

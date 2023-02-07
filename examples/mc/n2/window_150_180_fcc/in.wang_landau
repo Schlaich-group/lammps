@@ -1,0 +1,48 @@
+# GCMC for LJ simple fluid, no dynamics
+# comparable to Frenkel and Smit GCMC Case Study, Figure 5.8 
+
+# variables modifiable using -var command line switch
+
+variable        temp index 95.21 # reduced units: T = 1
+variable	    disp index 1.0
+variable        lbox index 22.5 # reduced units lbox = 6 sigma
+
+# global model settings
+
+units           real
+atom_style      atomic
+pair_style      lj/cut 15 # 4 sigma
+pair_modify	tail no # turn of to avoid triggering full_energy
+
+# box
+
+
+read_data last.data
+
+
+# lj parameters
+
+pair_coeff	* * 0.1892 3.75
+mass		* 28.0
+
+# we recommend setting up a dedicated group for gcmc
+
+group		gcmcgroup type 1
+
+# Also write data here, as fast convergence would result in this never being called...
+write_data last.data
+
+# gcmc
+
+fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} 1.000061037018933 min 150 max 180
+# The 50 is the f value
+
+# atom count
+
+compute_modify  thermo_temp dynamic yes
+
+# run
+
+run             100000
+
+write_data last.data

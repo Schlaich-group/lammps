@@ -1,0 +1,64 @@
+# GCMC for LJ simple fluid, no dynamics
+# comparable to Frenkel and Smit GCMC Case Study, Figure 5.8 
+
+# variables modifiable using -var command line switch
+
+variable        temp index 95.21 # reduced units: T = 1
+variable	    disp index 1.0
+variable        lbox index 22.5 # reduced units lbox = 6 sigma
+
+# global model settings
+
+units           real
+atom_style      atomic
+pair_style      lj/cut 15 # 4 sigma
+pair_modify	tail no # turn of to avoid triggering full_energy
+
+# box
+
+
+read_data last.data
+
+
+# lj parameters
+
+pair_coeff	* * 95.21 3.75
+mass		* 28.0
+
+# we recommend setting up a dedicated group for gcmc
+
+group		gcmcgroup type 1
+
+# gcmc
+
+fix             mywl gcmcgroup wang_landau 1 1 5 1 29494 ${temp} ${disp} 1.0644944589178593 min 50 max 80
+# The 50 is the f value
+
+# atom count
+
+variable 	type1 atom "type==1"
+group 		type1 dynamic gcmcgroup var type1
+variable        n1 equal count(type1)
+
+# averaging
+
+variable	rho equal density
+variable	p equal press
+variable	nugget equal 1.0e-8
+variable        lambda equal 1.0
+fix 		ave all ave/time 10 10 100 v_rho v_p v_n1 ave one file rho_vs_p.dat
+
+# output
+
+variable	tacc equal f_mywl[2]/(f_mywl[1]+${nugget})
+variable	iacc equal f_mywl[4]/(f_mywl[3]+${nugget})
+variable	dacc equal f_mywl[6]/(f_mywl[5]+${nugget})
+compute_modify  thermo_temp dynamic yes
+thermo_style    custom step temp press pe ke density atoms v_iacc v_dacc v_tacc
+thermo          1000
+
+# run
+
+run             10000
+
+write_data last.data
