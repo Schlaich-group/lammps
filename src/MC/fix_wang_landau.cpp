@@ -791,7 +791,7 @@ void FixWangLandau::pre_exchange()
 
   // Check that the first value of ns is ngas_min and the last value is ngas_max
   if (ns[0] != minimum || ns[ns.size()-1] != maximum) {
-      error->all(FLERR, "Bins in qs.dat do not match min and max values");
+      error->all(FLERR, "Bins in qs.dat does not match min and max values");
   }
 
   if (current_n < minimum || current_n > maximum) {
@@ -875,6 +875,7 @@ void FixWangLandau::wang_landau_update(const int n)
   }
 
   write_histogram();
+  MPI_Finalize();
   exit(0);
 }
 
@@ -883,10 +884,14 @@ void FixWangLandau::wang_landau_update(const int n)
 
 void FixWangLandau::write_histogram() {
   // Write the ns, qs, and hs to the qs.dat file, tab separated
+  int flg = 0;
   std::ofstream file("qs.dat");
   for (unsigned int i = 0; i < ns.size(); i++) {
     file << ns[i] << "\t" << qs[i] << "\t" << hs[i] << std::endl;
+    flg = 1;
   }
+  int flg_all = 0;
+  MPI_Allreduce(&flg,&flg_all,1,MPI_INT,MPI_MAX,world);
 }
 
 /* ----------------------------------------------------------------------
