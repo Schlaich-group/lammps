@@ -919,11 +919,16 @@ void FixWangLandau::write_histogram() {
   MPI_Barrier(world);
   if (comm->me == 0) {
     std::ofstream file("qs.dat");
+    if (!file.is_open()) {
+      std::cerr << "Error opening file qs.dat" << std::endl;
+      MPI_Abort(world, 1);
+    }
     for (unsigned int i = 0; i < ns.size(); i++) {
       file << ns[i] << "\t" << qs[i] << "\t" << hs[i] << std::endl;
     }
     file.close();
   }
+  MPI_Barrier(world);
 }
 
 /* ----------------------------------------------------------------------
