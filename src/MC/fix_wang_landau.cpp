@@ -916,7 +916,7 @@ void FixWangLandau::wang_landau_update(const int n)
 
 void FixWangLandau::write_histogram() {
   // Write the ns, qs, and hs to the qs.dat file, tab separated
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(world);
   if (comm->me == 0) {
     std::ofstream file("qs.dat");
     for (unsigned int i = 0; i < ns.size(); i++) {
